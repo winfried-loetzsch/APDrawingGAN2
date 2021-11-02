@@ -82,7 +82,7 @@ class SingleDataset(BaseDataset):
             NOSE_W = self.opt.NOSE_W * ratio
             MOUTH_H = self.opt.MOUTH_H * ratio
             MOUTH_W = self.opt.MOUTH_W * ratio
-            center = torch.IntTensor([[feats[0,0],feats[0,1]-4*ratio],[feats[1,0],feats[1,1]-4*ratio],[feats[2,0],feats[2,1]-NOSE_H/2+16*ratio],[mouth_x,mouth_y]])
+            center = torch.LongTensor([[feats[0,0],feats[0,1]-4*ratio],[feats[1,0],feats[1,1]-4*ratio],[feats[2,0],feats[2,1]-NOSE_H/2+16*ratio],[mouth_x,mouth_y]])
             item['center'] = center
             rhs = [int(EYE_H),int(EYE_H),int(NOSE_H),int(MOUTH_H)]
             rws = [int(EYE_W),int(EYE_W),int(NOSE_W),int(MOUTH_W)]
@@ -95,7 +95,10 @@ class SingleDataset(BaseDataset):
                     soft_border_mask4.append(torch.Tensor(soft_border_mask).unsqueeze(0))
                     item['soft_'+regions[i]+'_mask'] = soft_border_mask4[i]
             for i in range(4):
-                item[regions[i]+'_A'] = A[:,center[i,1]-rhs[i]/2:center[i,1]+rhs[i]/2,center[i,0]-rws[i]/2:center[i,0]+rws[i]/2]
+                item[regions[i]+'_A'] = A[:,(center[i,1]-rhs[i]/2).to(torch.long):
+                                            (center[i,1]+rhs[i]/2).to(torch.long),
+                                        (center[i,0]-rws[i]/2).to(torch.long):
+                                        (center[i,0]+rws[i]/2).to(torch.long)]
                 if self.opt.soft_border:
                     item[regions[i]+'_A'] = item[regions[i]+'_A'] * soft_border_mask4[i].repeat(int(input_nc/output_nc),1,1)
             if self.opt.compactmask:
@@ -111,7 +114,7 @@ class SingleDataset(BaseDataset):
                     cmask0 = (cmask0 >= 0.5).float()
                     cmasks0.append(cmask0)
                     cmask = cmask0.clone()
-                    cmask = cmask[:,center[i,1]-rhs[i]/2:center[i,1]+rhs[i]/2,center[i,0]-rws[i]/2:center[i,0]+rws[i]/2]
+                    cmask = cmask[:,(center[i,1]-rhs[i]/2).to(torch.long):(center[i,1]+rhs[i]/2).to(torch.long),(center[i,0]-rws[i]/2).to(torch.long):(center[i,0]+rws[i]/2).to(torch.long)]
                     cmasks.append(cmask)
                 item['cmaskel'] = cmasks[0]
                 item['cmasker'] = cmasks[1]
@@ -121,7 +124,7 @@ class SingleDataset(BaseDataset):
                 output_nc = self.opt.output_nc
                 mask = torch.ones([output_nc,A.shape[1],A.shape[2]])
                 for i in range(4):
-                    mask[:,center[i,1]-rhs[i]/2:center[i,1]+rhs[i]/2,center[i,0]-rws[i]/2:center[i,0]+rws[i]/2] = 0
+                    mask[:,(center[i,1]-rhs[i]/2).to(torch.long):(center[i,1]+rhs[i]/2).to(torch.long),(center[i,0]-rws[i]/2).to(torch.long):(center[i,0]+rws[i]/2).to(torch.long)] = 0
                 if self.opt.soft_border:
                     imgsize = self.opt.fineSize
                     maskn = mask[0].numpy()
@@ -136,8 +139,8 @@ class SingleDataset(BaseDataset):
                     xb = []
                     yb = []
                     for i in range(4):
-                        xbi = [center[i,0]-rws[i]/2, center[i,0]+rws[i]/2-1]
-                        ybi = [center[i,1]-rhs[i]/2, center[i,1]+rhs[i]/2-1]
+                        xbi = [(center[i,0]-rws[i]/2).to(torch.long), (center[i,0]+rws[i]/2-1).to(torch.long)]
+                        ybi = [(center[i,1]-rhs[i]/2).to(torch.long), (center[i,1]+rhs[i]/2-1).to(torch.long)]
                         for j in range(2):
                             maskx = bound[:,xbi[j]]
                             masky = bound[ybi[j],:]

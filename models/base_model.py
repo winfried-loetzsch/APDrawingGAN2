@@ -105,7 +105,7 @@ class BaseModel():
                     net.cuda(self.gpu_ids[0])
                 else:
                     torch.save(net.cpu().state_dict(), save_path)
-    
+
     def save_networks2(self, which_epoch):
         gen_name = os.path.join(self.save_dir, '%s_net_gen.pt' % (which_epoch))
         dis_name = os.path.join(self.save_dir, '%s_net_dis.pt' % (which_epoch))
@@ -120,7 +120,7 @@ class BaseModel():
                     net.cuda(self.gpu_ids[0])
                 else:
                     state_dict = net.cpu().state_dict()
-                
+
                 if name[0] == 'G':
                     dict_gen[name] = state_dict
                 elif name[0] == 'D':
@@ -142,7 +142,7 @@ class BaseModel():
                 if getattr(module, key) is None:
                     state_dict.pop('.'.join(keys))
             if module.__class__.__name__.startswith('InstanceNorm') and \
-               (key == 'num_batches_tracked'):
+                    (key == 'num_batches_tracked'):
                 state_dict.pop('.'.join(keys))
         else:
             self.__patch_instance_norm_state_dict(state_dict, getattr(module, key), keys, i + 1)
@@ -171,7 +171,7 @@ class BaseModel():
                 for key in list(state_dict.keys()):  # need to copy keys here because we mutate in loop
                     self.__patch_instance_norm_state_dict(state_dict, net, key.split('.'))
                 net.load_state_dict(state_dict)
-    
+
     def load_networks2(self, which_epoch):
         gen_name = os.path.join(self.save_dir, '%s_net_gen.pt' % (which_epoch))
         gen_state_dict = torch.load(gen_name, map_location=str(self.device))
@@ -184,19 +184,19 @@ class BaseModel():
                 if isinstance(net, torch.nn.DataParallel):
                     net = net.module
                 if name[0] == 'G':
-                    print('loading the model %s from %s' % (name,gen_name))
+                    print('loading the model %s from %s' % (name, gen_name))
                     state_dict = gen_state_dict[name]
                 elif name[0] == 'D':
-                    print('loading the model %s from %s' % (name,gen_name))
+                    print('loading the model %s from %s' % (name, gen_name))
                     state_dict = dis_state_dict[name]
-                
+
                 if hasattr(state_dict, '_metadata'):
                     del state_dict._metadata
                 # patch InstanceNorm checkpoints prior to 0.4
                 for key in list(state_dict.keys()):  # need to copy keys here because we mutate in loop
                     self.__patch_instance_norm_state_dict(state_dict, net, key.split('.'))
                 net.load_state_dict(state_dict)
-    
+
     # load auxiliary net models from the disk
     def load_auxiliary_networks(self):
         for name in self.auxiliary_model_names:
@@ -214,7 +214,8 @@ class BaseModel():
                 print('loading the model from %s' % load_path)
                 # if you are using PyTorch newer than 0.4 (e.g., built from
                 # GitHub source), you can remove str() on self.device
-                if name in ['DT1', 'DT2', 'Line1', 'Line2', 'Continuity1', 'Continuity2', 'Regressor', 'Regressorhair', 'Regressorface']:
+                if name in ['DT1', 'DT2', 'Line1', 'Line2', 'Continuity1', 'Continuity2', 'Regressor', 'Regressorhair',
+                            'Regressorface']:
                     state_dict = torch.load(load_path, map_location=str(self.device_p))
                 else:
                     state_dict = torch.load(load_path, map_location=str(self.device))
@@ -251,18 +252,19 @@ class BaseModel():
 
     # =============================================================================================================
     def inverse_mask(self, mask):
-        return torch.ones(mask.shape).to(self.device)-mask
-    
-    def masked(self, A,mask):
-        return (A/2+0.5)*mask*2-1
-    
-    def add_with_mask(self, A,B,mask):
-        return ((A/2+0.5)*mask+(B/2+0.5)*(torch.ones(mask.shape).to(self.device)-mask))*2-1
-    
-    def addone_with_mask(self, A,mask):
-        return ((A/2+0.5)*mask+(torch.ones(mask.shape).to(self.device)-mask))*2-1
+        return torch.ones(mask.shape).to(self.device) - mask
 
-    def partCombiner(self, eyel, eyer, nose, mouth, average_pos=False, comb_op = 1, region_enm = 0, cmaskel = None, cmasker = None, cmaskno = None, cmaskmo = None):
+    def masked(self, A, mask):
+        return (A / 2 + 0.5) * mask * 2 - 1
+
+    def add_with_mask(self, A, B, mask):
+        return ((A / 2 + 0.5) * mask + (B / 2 + 0.5) * (torch.ones(mask.shape).to(self.device) - mask)) * 2 - 1
+
+    def addone_with_mask(self, A, mask):
+        return ((A / 2 + 0.5) * mask + (torch.ones(mask.shape).to(self.device) - mask)) * 2 - 1
+
+    def partCombiner(self, eyel, eyer, nose, mouth, average_pos=False, comb_op=1, region_enm=0, cmaskel=None,
+                     cmasker=None, cmaskno=None, cmaskmo=None):
         '''
         x         y
         100.571   123.429
@@ -276,7 +278,7 @@ class BaseModel():
         if comb_op == 0:
             # use max pooling, pad black for eyes etc
             padvalue = -1
-            if region_enm in [1,2]:
+            if region_enm in [1, 2]:
                 eyel = eyel * cmaskel
                 eyer = eyer * cmasker
                 nose = nose * cmaskno
@@ -284,12 +286,12 @@ class BaseModel():
         else:
             # use min pooling, pad white for eyes etc
             padvalue = 1
-            if region_enm in [1,2]:
+            if region_enm in [1, 2]:
                 eyel = self.addone_with_mask(eyel, cmaskel)
                 eyer = self.addone_with_mask(eyer, cmasker)
                 nose = self.addone_with_mask(nose, cmaskno)
                 mouth = self.addone_with_mask(mouth, cmaskmo)
-        if region_enm in [0,1]: # need to pad
+        if region_enm in [0, 1]:  # need to pad
             IMAGE_SIZE = self.opt.fineSize
             ratio = IMAGE_SIZE / 256
             EYE_W = self.opt.EYE_W * ratio
@@ -298,20 +300,32 @@ class BaseModel():
             NOSE_H = self.opt.NOSE_H * ratio
             MOUTH_W = self.opt.MOUTH_W * ratio
             MOUTH_H = self.opt.MOUTH_H * ratio
-            bs,nc,_,_ = eyel.shape
-            eyel_p = torch.ones((bs,nc,IMAGE_SIZE,IMAGE_SIZE)).to(self.device)
-            eyer_p = torch.ones((bs,nc,IMAGE_SIZE,IMAGE_SIZE)).to(self.device)
-            nose_p = torch.ones((bs,nc,IMAGE_SIZE,IMAGE_SIZE)).to(self.device)
-            mouth_p = torch.ones((bs,nc,IMAGE_SIZE,IMAGE_SIZE)).to(self.device)
+            bs, nc, _, _ = eyel.shape
+            eyel_p = torch.ones((bs, nc, IMAGE_SIZE, IMAGE_SIZE)).to(self.device)
+            eyer_p = torch.ones((bs, nc, IMAGE_SIZE, IMAGE_SIZE)).to(self.device)
+            nose_p = torch.ones((bs, nc, IMAGE_SIZE, IMAGE_SIZE)).to(self.device)
+            mouth_p = torch.ones((bs, nc, IMAGE_SIZE, IMAGE_SIZE)).to(self.device)
             for i in range(bs):
                 if not average_pos:
-                    center = self.center[i]#x,y
-                else:# if average_pos = True
-                    center = torch.tensor([[101,123-4],[155,123-4],[128,156-NOSE_H/2+16],[128,185]])
-                eyel_p[i] = torch.nn.ConstantPad2d((int(center[0,0] - EYE_W / 2 - 1), int(IMAGE_SIZE - (center[0,0]+EYE_W/2-1)), int(center[0,1] - EYE_H / 2 - 1),int(IMAGE_SIZE - (center[0,1]+EYE_H/2 - 1))),-1)(eyel[i])
-                eyer_p[i] = torch.nn.ConstantPad2d((int(center[1,0] - EYE_W / 2 - 1), int(IMAGE_SIZE - (center[1,0]+EYE_W/2-1)), int(center[1,1] - EYE_H / 2 - 1), int(IMAGE_SIZE - (center[1,1]+EYE_H/2 - 1))),-1)(eyer[i])
-                nose_p[i] = torch.nn.ConstantPad2d((int(center[2,0] - NOSE_W / 2 - 1), int(IMAGE_SIZE - (center[2,0]+NOSE_W/2-1)), int(center[2,1] - NOSE_H / 2 - 1), int(IMAGE_SIZE - (center[2,1]+NOSE_H/2 - 1))),-1)(nose[i])
-                mouth_p[i] = torch.nn.ConstantPad2d((int(center[3,0] - MOUTH_W / 2 - 1), int(IMAGE_SIZE - (center[3,0]+MOUTH_W/2-1)), int(center[3,1] - MOUTH_H / 2 - 1), int(IMAGE_SIZE - (center[3,1]+MOUTH_H/2 - 1))),-1)(mouth[i])
+                    center = self.center[i]  # x,y
+                else:  # if average_pos = True
+                    center = torch.tensor([[101, 123 - 4], [155, 123 - 4], [128, 156 - NOSE_H / 2 + 16], [128, 185]])
+                eyel_p[i] = torch.nn.ConstantPad2d((int(center[0, 0] - EYE_W / 2 - 1),
+                                                    int(IMAGE_SIZE - (center[0, 0] + EYE_W / 2 - 1)),
+                                                    int(center[0, 1] - EYE_H / 2 - 1),
+                                                    int(IMAGE_SIZE - (center[0, 1] + EYE_H / 2 - 1))), -1)(eyel[i])
+                eyer_p[i] = torch.nn.ConstantPad2d((int(center[1, 0] - EYE_W / 2 - 1),
+                                                    int(IMAGE_SIZE - (center[1, 0] + EYE_W / 2 - 1)),
+                                                    int(center[1, 1] - EYE_H / 2 - 1),
+                                                    int(IMAGE_SIZE - (center[1, 1] + EYE_H / 2 - 1))), -1)(eyer[i])
+                nose_p[i] = torch.nn.ConstantPad2d((int(center[2, 0] - NOSE_W / 2 - 1),
+                                                    int(IMAGE_SIZE - (center[2, 0] + NOSE_W / 2 - 1)),
+                                                    int(center[2, 1] - NOSE_H / 2 - 1),
+                                                    int(IMAGE_SIZE - (center[2, 1] + NOSE_H / 2 - 1))), -1)(nose[i])
+                mouth_p[i] = torch.nn.ConstantPad2d((int(center[3, 0] - MOUTH_W / 2 - 1),
+                                                     int(IMAGE_SIZE - (center[3, 0] + MOUTH_W / 2 - 1)),
+                                                     int(center[3, 1] - MOUTH_H / 2 - 1),
+                                                     int(IMAGE_SIZE - (center[3, 1] + MOUTH_H / 2 - 1))), -1)(mouth[i])
         elif region_enm in [2]:
             eyel_p = eyel
             eyer_p = eyer
@@ -328,13 +342,14 @@ class BaseModel():
             eye_nose = torch.min(eyes, nose_p)
             result = torch.min(eye_nose, mouth_p)
         return result
-    
-    def partCombiner2(self, eyel, eyer, nose, mouth, hair, mask, comb_op = 1, region_enm = 0, cmaskel = None, cmasker = None, cmaskno = None, cmaskmo = None):
+
+    def partCombiner2(self, eyel, eyer, nose, mouth, hair, mask, comb_op=1, region_enm=0, cmaskel=None, cmasker=None,
+                      cmaskno=None, cmaskmo=None):
         if comb_op == 0:
             # use max pooling, pad black for eyes etc
             padvalue = -1
             hair = self.masked(hair, mask)
-            if region_enm in [1,2]:
+            if region_enm in [1, 2]:
                 eyel = eyel * cmaskel
                 eyer = eyer * cmasker
                 nose = nose * cmaskno
@@ -343,12 +358,12 @@ class BaseModel():
             # use min pooling, pad white for eyes etc
             padvalue = 1
             hair = self.addone_with_mask(hair, mask)
-            if region_enm in [1,2]:
+            if region_enm in [1, 2]:
                 eyel = self.addone_with_mask(eyel, cmaskel)
                 eyer = self.addone_with_mask(eyer, cmasker)
                 nose = self.addone_with_mask(nose, cmaskno)
                 mouth = self.addone_with_mask(mouth, cmaskmo)
-        if region_enm in [0,1]: # need to pad
+        if region_enm in [0, 1]:  # need to pad
             IMAGE_SIZE = self.opt.fineSize
             ratio = IMAGE_SIZE / 256
             EYE_W = self.opt.EYE_W * ratio
@@ -357,17 +372,26 @@ class BaseModel():
             NOSE_H = self.opt.NOSE_H * ratio
             MOUTH_W = self.opt.MOUTH_W * ratio
             MOUTH_H = self.opt.MOUTH_H * ratio
-            bs,nc,_,_ = eyel.shape
-            eyel_p = torch.ones((bs,nc,IMAGE_SIZE,IMAGE_SIZE)).to(self.device)
-            eyer_p = torch.ones((bs,nc,IMAGE_SIZE,IMAGE_SIZE)).to(self.device)
-            nose_p = torch.ones((bs,nc,IMAGE_SIZE,IMAGE_SIZE)).to(self.device)
-            mouth_p = torch.ones((bs,nc,IMAGE_SIZE,IMAGE_SIZE)).to(self.device)
+            bs, nc, _, _ = eyel.shape
+            eyel_p = torch.ones((bs, nc, IMAGE_SIZE, IMAGE_SIZE)).to(self.device)
+            eyer_p = torch.ones((bs, nc, IMAGE_SIZE, IMAGE_SIZE)).to(self.device)
+            nose_p = torch.ones((bs, nc, IMAGE_SIZE, IMAGE_SIZE)).to(self.device)
+            mouth_p = torch.ones((bs, nc, IMAGE_SIZE, IMAGE_SIZE)).to(self.device)
             for i in range(bs):
-                center = self.center[i]#x,y
-                eyel_p[i] = torch.nn.ConstantPad2d((center[0,0] - EYE_W / 2, IMAGE_SIZE - (center[0,0]+EYE_W/2), center[0,1] - EYE_H / 2, IMAGE_SIZE - (center[0,1]+EYE_H/2)),padvalue)(eyel[i])
-                eyer_p[i] = torch.nn.ConstantPad2d((center[1,0] - EYE_W / 2, IMAGE_SIZE - (center[1,0]+EYE_W/2), center[1,1] - EYE_H / 2, IMAGE_SIZE - (center[1,1]+EYE_H/2)),padvalue)(eyer[i])
-                nose_p[i] = torch.nn.ConstantPad2d((center[2,0] - NOSE_W / 2, IMAGE_SIZE - (center[2,0]+NOSE_W/2), center[2,1] - NOSE_H / 2, IMAGE_SIZE - (center[2,1]+NOSE_H/2)),padvalue)(nose[i])
-                mouth_p[i] = torch.nn.ConstantPad2d((center[3,0] - MOUTH_W / 2, IMAGE_SIZE - (center[3,0]+MOUTH_W/2), center[3,1] - MOUTH_H / 2, IMAGE_SIZE - (center[3,1]+MOUTH_H/2)),padvalue)(mouth[i])
+                center = self.center[i]  # x,y
+                eyel_p[i] = torch.nn.ConstantPad2d((center[0, 0] - EYE_W / 2, IMAGE_SIZE - (center[0, 0] + EYE_W / 2),
+                                                    center[0, 1] - EYE_H / 2, IMAGE_SIZE - (center[0, 1] + EYE_H / 2)),
+                                                   padvalue)(eyel[i])
+                eyer_p[i] = torch.nn.ConstantPad2d((center[1, 0] - EYE_W / 2, IMAGE_SIZE - (center[1, 0] + EYE_W / 2),
+                                                    center[1, 1] - EYE_H / 2, IMAGE_SIZE - (center[1, 1] + EYE_H / 2)),
+                                                   padvalue)(eyer[i])
+                nose_p[i] = torch.nn.ConstantPad2d((center[2, 0] - NOSE_W / 2, IMAGE_SIZE - (center[2, 0] + NOSE_W / 2),
+                                                    center[2, 1] - NOSE_H / 2,
+                                                    IMAGE_SIZE - (center[2, 1] + NOSE_H / 2)), padvalue)(nose[i])
+                mouth_p[i] = torch.nn.ConstantPad2d((center[3, 0] - MOUTH_W / 2,
+                                                     IMAGE_SIZE - (center[3, 0] + MOUTH_W / 2),
+                                                     center[3, 1] - MOUTH_H / 2,
+                                                     IMAGE_SIZE - (center[3, 1] + MOUTH_H / 2)), padvalue)(mouth[i])
         elif region_enm in [2]:
             eyel_p = eyel
             eyer_p = eyer
@@ -378,22 +402,23 @@ class BaseModel():
             eyes = torch.max(eyel_p, eyer_p)
             eye_nose = torch.max(eyes, nose_p)
             eye_nose_mouth = torch.max(eye_nose, mouth_p)
-            result = torch.max(hair,eye_nose_mouth)
+            result = torch.max(hair, eye_nose_mouth)
         else:
             # use min pooling
             eyes = torch.min(eyel_p, eyer_p)
             eye_nose = torch.min(eyes, nose_p)
             eye_nose_mouth = torch.min(eye_nose, mouth_p)
-            result = torch.min(hair,eye_nose_mouth)
+            result = torch.min(hair, eye_nose_mouth)
         return result
-    
-    def partCombiner2_bg(self, eyel, eyer, nose, mouth, hair, bg, maskh, maskb, comb_op = 1, region_enm = 0, cmaskel = None, cmasker = None, cmaskno = None, cmaskmo = None):
+
+    def partCombiner2_bg(self, eyel, eyer, nose, mouth, hair, bg, maskh, maskb, comb_op=1, region_enm=0, cmaskel=None,
+                         cmasker=None, cmaskno=None, cmaskmo=None):
         if comb_op == 0:
             # use max pooling, pad black for eyes etc
             padvalue = -1
             hair = self.masked(hair, maskh)
             bg = self.masked(bg, maskb)
-            if region_enm in [1,2]:
+            if region_enm in [1, 2]:
                 eyel = eyel * cmaskel
                 eyer = eyer * cmasker
                 nose = nose * cmaskno
@@ -403,12 +428,12 @@ class BaseModel():
             padvalue = 1
             hair = self.addone_with_mask(hair, maskh)
             bg = self.addone_with_mask(bg, maskb)
-            if region_enm in [1,2]:
+            if region_enm in [1, 2]:
                 eyel = self.addone_with_mask(eyel, cmaskel)
                 eyer = self.addone_with_mask(eyer, cmasker)
                 nose = self.addone_with_mask(nose, cmaskno)
                 mouth = self.addone_with_mask(mouth, cmaskmo)
-        if region_enm in [0,1]: # need to pad to full size
+        if region_enm in [0, 1]:  # need to pad to full size
             IMAGE_SIZE = self.opt.fineSize
             ratio = IMAGE_SIZE / 256
             EYE_W = self.opt.EYE_W * ratio
@@ -417,17 +442,29 @@ class BaseModel():
             NOSE_H = self.opt.NOSE_H * ratio
             MOUTH_W = self.opt.MOUTH_W * ratio
             MOUTH_H = self.opt.MOUTH_H * ratio
-            bs,nc,_,_ = eyel.shape
-            eyel_p = torch.ones((bs,nc,IMAGE_SIZE,IMAGE_SIZE)).to(self.device)
-            eyer_p = torch.ones((bs,nc,IMAGE_SIZE,IMAGE_SIZE)).to(self.device)
-            nose_p = torch.ones((bs,nc,IMAGE_SIZE,IMAGE_SIZE)).to(self.device)
-            mouth_p = torch.ones((bs,nc,IMAGE_SIZE,IMAGE_SIZE)).to(self.device)
+            bs, nc, _, _ = eyel.shape
+            eyel_p = torch.ones((bs, nc, IMAGE_SIZE, IMAGE_SIZE)).to(self.device)
+            eyer_p = torch.ones((bs, nc, IMAGE_SIZE, IMAGE_SIZE)).to(self.device)
+            nose_p = torch.ones((bs, nc, IMAGE_SIZE, IMAGE_SIZE)).to(self.device)
+            mouth_p = torch.ones((bs, nc, IMAGE_SIZE, IMAGE_SIZE)).to(self.device)
             for i in range(bs):
-                center = self.center[i]#x,y
-                eyel_p[i] = torch.nn.ConstantPad2d((center[0,0] - EYE_W / 2, IMAGE_SIZE - (center[0,0]+EYE_W/2), center[0,1] - EYE_H / 2, IMAGE_SIZE - (center[0,1]+EYE_H/2)),padvalue)(eyel[i])
-                eyer_p[i] = torch.nn.ConstantPad2d((center[1,0] - EYE_W / 2, IMAGE_SIZE - (center[1,0]+EYE_W/2), center[1,1] - EYE_H / 2, IMAGE_SIZE - (center[1,1]+EYE_H/2)),padvalue)(eyer[i])
-                nose_p[i] = torch.nn.ConstantPad2d((center[2,0] - NOSE_W / 2, IMAGE_SIZE - (center[2,0]+NOSE_W/2), center[2,1] - NOSE_H / 2, IMAGE_SIZE - (center[2,1]+NOSE_H/2)),padvalue)(nose[i])
-                mouth_p[i] = torch.nn.ConstantPad2d((center[3,0] - MOUTH_W / 2, IMAGE_SIZE - (center[3,0]+MOUTH_W/2), center[3,1] - MOUTH_H / 2, IMAGE_SIZE - (center[3,1]+MOUTH_H/2)),padvalue)(mouth[i])
+                center = self.center[i]  # x,y
+                eyel_p[i] = torch.nn.ConstantPad2d((int(center[0, 0] - EYE_W / 2),
+                                                    IMAGE_SIZE - int(center[0, 0] + EYE_W / 2),
+                                                    int(center[0, 1] - EYE_H / 2),
+                                                    IMAGE_SIZE - int(center[0, 1] + EYE_H / 2)), padvalue)(eyel[i])
+                eyer_p[i] = torch.nn.ConstantPad2d((int(center[1, 0] - EYE_W / 2),
+                                                    IMAGE_SIZE - int(center[1, 0] + EYE_W / 2),
+                                                    int(center[1, 1] - EYE_H / 2),
+                                                    IMAGE_SIZE - int(center[1, 1] + EYE_H / 2)), padvalue)(eyer[i])
+                nose_p[i] = torch.nn.ConstantPad2d((int(center[2, 0] - NOSE_W / 2),
+                                                    IMAGE_SIZE - int(center[2, 0] + NOSE_W / 2),
+                                                    int(center[2, 1] - NOSE_H / 2),
+                                                    IMAGE_SIZE - int(center[2, 1] + NOSE_H / 2)), padvalue)(nose[i])
+                mouth_p[i] = torch.nn.ConstantPad2d((int(center[3, 0] - MOUTH_W / 2),
+                                                     IMAGE_SIZE - int(center[3, 0] + MOUTH_W / 2),
+                                                     int(center[3, 1] - MOUTH_H / 2),
+                                                     IMAGE_SIZE - int(center[3, 1] + MOUTH_H / 2)), padvalue)(mouth[i])
         elif region_enm in [2]:
             eyel_p = eyel
             eyer_p = eyer
@@ -437,17 +474,17 @@ class BaseModel():
             eyes = torch.max(eyel_p, eyer_p)
             eye_nose = torch.max(eyes, nose_p)
             eye_nose_mouth = torch.max(eye_nose, mouth_p)
-            eye_nose_mouth_hair = torch.max(hair,eye_nose_mouth)
-            result = torch.max(bg,eye_nose_mouth_hair)
+            eye_nose_mouth_hair = torch.max(hair, eye_nose_mouth)
+            result = torch.max(bg, eye_nose_mouth_hair)
         else:
             eyes = torch.min(eyel_p, eyer_p)
             eye_nose = torch.min(eyes, nose_p)
             eye_nose_mouth = torch.min(eye_nose, mouth_p)
-            eye_nose_mouth_hair = torch.min(hair,eye_nose_mouth)
-            result = torch.min(bg,eye_nose_mouth_hair)
+            eye_nose_mouth_hair = torch.min(hair, eye_nose_mouth)
+            result = torch.min(bg, eye_nose_mouth_hair)
         return result
-    
-    def partCombiner3(self, face, hair, maskf, maskh, comb_op = 1):
+
+    def partCombiner3(self, face, hair, maskf, maskh, comb_op=1):
         if comb_op == 0:
             # use max pooling, pad black etc
             padvalue = -1
@@ -459,27 +496,25 @@ class BaseModel():
             face = self.addone_with_mask(face, maskf)
             hair = self.addone_with_mask(hair, maskh)
         if comb_op == 0:
-            result = torch.max(face,hair)
+            result = torch.max(face, hair)
         else:
-            result = torch.min(face,hair)
+            result = torch.min(face, hair)
         return result
 
-
     def tocv2(ts):
-        img = (ts.numpy()/2+0.5)*255
+        img = (ts.numpy() / 2 + 0.5) * 255
         img = img.astype('uint8')
-        img = np.transpose(img,(1,2,0))
-        img = img[:,:,::-1]#rgb->bgr
+        img = np.transpose(img, (1, 2, 0))
+        img = img[:, :, ::-1]  # rgb->bgr
         return img
-    
+
     def totor(img):
-        img = img[:,:,::-1]
+        img = img[:, :, ::-1]
         tor = transforms.ToTensor()(img)
         tor = transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))(tor)
         return tor
-    
-    
-    def ContinuityForTest(self, real = 0):
+
+    def ContinuityForTest(self, real=0):
         # Patch-based
         self.get_patches()
         self.outputs = self.netRegressor(self.fake_B_patches)
@@ -494,16 +529,17 @@ class BaseModel():
             self.get_patches_real()
             self.outputs2 = self.netRegressor(self.real_B_patches)
             line_continuity2 = torch.mean(self.outputs2)
-            file_name = os.path.join(opt.results_dir, opt.name, '%s_%s' % (opt.phase, opt.which_epoch), 'continuity-r.txt')
+            file_name = os.path.join(opt.results_dir, opt.name, '%s_%s' % (opt.phase, opt.which_epoch),
+                                     'continuity-r.txt')
             message = '%s %.04f' % (self.image_paths[0], line_continuity2)
             with open(file_name, 'a+') as c_file:
                 c_file.write(message)
                 c_file.write('\n')
-    
-    def getLocalParts(self,fakeAB):
-        bs,nc,_,_ = fakeAB.shape #dtype torch.float32
+
+    def getLocalParts(self, fakeAB):
+        bs, nc, _, _ = fakeAB.shape  # dtype torch.float32
         ncr = int(nc / self.opt.output_nc)
-        if self.opt.region_enm in [0,1]:
+        if self.opt.region_enm in [0, 1]:
             ratio = self.opt.fineSize / 256
             EYE_H = self.opt.EYE_H * ratio
             EYE_W = self.opt.EYE_W * ratio
@@ -511,28 +547,32 @@ class BaseModel():
             NOSE_W = self.opt.NOSE_W * ratio
             MOUTH_H = self.opt.MOUTH_H * ratio
             MOUTH_W = self.opt.MOUTH_W * ratio
-            eyel = torch.ones((bs,nc,int(EYE_H),int(EYE_W))).to(self.device)
-            eyer = torch.ones((bs,nc,int(EYE_H),int(EYE_W))).to(self.device)
-            nose = torch.ones((bs,nc,int(NOSE_H),int(NOSE_W))).to(self.device)
-            mouth = torch.ones((bs,nc,int(MOUTH_H),int(MOUTH_W))).to(self.device)
+            eyel = torch.ones((bs, nc, int(EYE_H), int(EYE_W))).to(self.device)
+            eyer = torch.ones((bs, nc, int(EYE_H), int(EYE_W))).to(self.device)
+            nose = torch.ones((bs, nc, int(NOSE_H), int(NOSE_W))).to(self.device)
+            mouth = torch.ones((bs, nc, int(MOUTH_H), int(MOUTH_W))).to(self.device)
             for i in range(bs):
                 center = self.center[i]
-                eyel[i] = fakeAB[i,:,center[0,1]-EYE_H/2:center[0,1]+EYE_H/2,center[0,0]-EYE_W/2:center[0,0]+EYE_W/2]
-                eyer[i] = fakeAB[i,:,center[1,1]-EYE_H/2:center[1,1]+EYE_H/2,center[1,0]-EYE_W/2:center[1,0]+EYE_W/2]
-                nose[i] = fakeAB[i,:,center[2,1]-NOSE_H/2:center[2,1]+NOSE_H/2,center[2,0]-NOSE_W/2:center[2,0]+NOSE_W/2]
-                mouth[i] = fakeAB[i,:,center[3,1]-MOUTH_H/2:center[3,1]+MOUTH_H/2,center[3,0]-MOUTH_W/2:center[3,0]+MOUTH_W/2]
+                eyel[i] = fakeAB[i, :, center[0, 1] - EYE_H / 2:center[0, 1] + EYE_H / 2,
+                          center[0, 0] - EYE_W / 2:center[0, 0] + EYE_W / 2]
+                eyer[i] = fakeAB[i, :, center[1, 1] - EYE_H / 2:center[1, 1] + EYE_H / 2,
+                          center[1, 0] - EYE_W / 2:center[1, 0] + EYE_W / 2]
+                nose[i] = fakeAB[i, :, center[2, 1] - NOSE_H / 2:center[2, 1] + NOSE_H / 2,
+                          center[2, 0] - NOSE_W / 2:center[2, 0] + NOSE_W / 2]
+                mouth[i] = fakeAB[i, :, center[3, 1] - MOUTH_H / 2:center[3, 1] + MOUTH_H / 2,
+                           center[3, 0] - MOUTH_W / 2:center[3, 0] + MOUTH_W / 2]
         elif self.opt.region_enm in [2]:
-            eyel = (fakeAB/2+0.5) * self.cmaskel.repeat(1,ncr,1,1) * 2 - 1
-            eyer = (fakeAB/2+0.5) * self.cmasker.repeat(1,ncr,1,1) * 2 - 1
-            nose = (fakeAB/2+0.5) * self.cmask.repeat(1,ncr,1,1) * 2 - 1
-            mouth = (fakeAB/2+0.5) * self.cmaskmo.repeat(1,ncr,1,1) * 2 - 1
-        hair = (fakeAB/2+0.5) * self.mask.repeat(1,ncr,1,1) * self.mask2.repeat(1,ncr,1,1) * 2 - 1
-        bg = (fakeAB/2+0.5) * (torch.ones(fakeAB.shape).to(self.device)-self.mask2.repeat(1,ncr,1,1)) * 2 - 1
+            eyel = (fakeAB / 2 + 0.5) * self.cmaskel.repeat(1, ncr, 1, 1) * 2 - 1
+            eyer = (fakeAB / 2 + 0.5) * self.cmasker.repeat(1, ncr, 1, 1) * 2 - 1
+            nose = (fakeAB / 2 + 0.5) * self.cmask.repeat(1, ncr, 1, 1) * 2 - 1
+            mouth = (fakeAB / 2 + 0.5) * self.cmaskmo.repeat(1, ncr, 1, 1) * 2 - 1
+        hair = (fakeAB / 2 + 0.5) * self.mask.repeat(1, ncr, 1, 1) * self.mask2.repeat(1, ncr, 1, 1) * 2 - 1
+        bg = (fakeAB / 2 + 0.5) * (torch.ones(fakeAB.shape).to(self.device) - self.mask2.repeat(1, ncr, 1, 1)) * 2 - 1
         return eyel, eyer, nose, mouth, hair, bg
-    
-    def getaddw(self,local_name):
+
+    def getaddw(self, local_name):
         addw = 1
-        if local_name in ['DLEyel','DLEyer','eyel','eyer','DLFace','face']:
+        if local_name in ['DLEyel', 'DLEyer', 'eyel', 'eyer', 'DLFace', 'face']:
             addw = self.opt.addw_eye
         elif local_name in ['DLNose', 'nose']:
             addw = self.opt.addw_nose
